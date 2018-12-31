@@ -1,6 +1,3 @@
-
-import random
-import time
 import os
 import msvcrt
 
@@ -132,7 +129,3 @@ while True:
         key = getKeyboardArrow()
     controlCursor(maze, cursor, key)
     
-#    if(key != None):
-#        print(key)
-    
-#    time.sleep(1)
