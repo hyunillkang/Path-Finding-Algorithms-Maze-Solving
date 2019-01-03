@@ -69,13 +69,14 @@ def controlCursor(maze, cursor, key): # cursor moves according to pressed keyboa
             
 
 def printMaze(maze, cursor):
+    os.system('cls')
     for row in range(0, maze.rows):
         for col in range(0, maze.cols):
             if(row == cursor.row and col == cursor.col):
                 print('O',end=' ')
             else:
                 print(maze.contents[row][col], end=' ')
-        print('\n')
+        print()
     print("Arrow keys: move cursor")
     print("Space: create/remove obstacle")
     print("S/D: set start/destination point")
@@ -121,7 +122,6 @@ cols = int(input("Input the cols of the maze size: "))
 cursor =  Cursor(1, 1) 
 maze = createMazeFrame(rows, cols)
 while True:
-    os.system('cls')
     printMaze(maze, cursor)
     key = getKeyboardArrow()
     if(key == 'output'):
