@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Page Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body>
+    <div>
+    <input type="radio" id="blockRadio" name="mode" value="block" checked onchange="selectMode(this);" />
+    <label for="blockRadio">Set Blocks</label>
+    
+    <input type="radio" id="startRadio" name="mode" value="start" onchange="selectMode(this);" />
+    <label for="blockRadio">Set Start Point</label>
+
+    <input type="radio" id="destRadio" name="mode" value="destination" onchange="selectMode(this);" />
+    <label for="blockRadio">Set Destination Point</label>
+</div>
+    <input type="button" value="Print Grid" onclick="printGrid();" />
+    </br>
+
+    <label for="bfsRadio">BFS</label>
+    <input type="radio" id="bfsRadio" name="solvingAlgorithms" value="bfs" checked />
+
+    <input type="button" value="Find Path" onclick="findPath();" />
+    </br>
+
+    <canvas id="canvas" width="500" height="500" style="border: solid 1px black"></canvas>
+    <p id="message"></p>
+    <p id="queueMsg"></p>
+    <script>
+
+        function Cell(row, col, status) {
+            this.row = row;
+            this.col = col;
+            this.status = status;
+            this.parent = undefined;
+        }
+        /*
+         0: empty
+         1: block
+         2: start
+         3: destination
+         4: ongoing
+         5: found
+        */
+        var canvas = document.getElementById("canvas");
+        var ctx = canvas.getContext("2d");
+
+        var mode = 'block';
+
+        var rows = 10;
+        var cols = 10;
+
+        var cellSize = 50;
+
+        var mousePosition = {
+            x: 0,
+            y: 0,
+        }
+
+        var grid = [];
+        for (var i = 0; i < rows; i++) {
+            var temp = [];
+            for (var j = 0; j < cols; j++) {
+                temp.push(0);
+            }
+            grid.push(temp);
+        }
+
+        for (var i = 0; i < rows; i++) {
+            for (var j = 0; j < cols; j++) {
+                ctx.strokeRect(i * cellSize, j * cellSize, cellSize, cellSize);
+            }
+        }
+
+        canvas.addEventListener('mousemove', function (e) {
+            var bbox = canvas.getBoundingClientRect();
+            var x = e.clientX - bbox.left;
+            var y = e.clientY - bbox.top;
+
+            mousePosition.x = x;
+            mousePosition.y = y;
+
+            var message = document.getElementById("message");
+            message.textContent = x + ", " + y;
+
+
+        });
+
+        canvas.addEventListener('click', function (e) {
+
+            var x = mousePosition.x;
+            var y = mousePosition.y;
+
+            var col = Math.floor(x / cellSize);
+            var row = Math.floor(y / cellSize);
+
+            switch (mode) {
+                case 'block':
+                    if (grid[row][col] == 1) {
+                        deleteBlock(row, col);
+                    } else {
+                        createBlock(row, col);
+                    }
+                    break;
+                case 'start':
+                    setStartPoint(row, col);
+                    break;
+
+                case 'destination':
+                    setDestinationPoint(row, col);
+                    break;
+            }
+
+
+
+
+        });
+
+
+        function createBlock(row, col) {
+
+            grid[row][col] = 1;
+            ctx.fillStyle = '#ccc';
+            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+
+        function deleteBlock(row, col) {
+            grid[row][col] = 0;
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+
+        function setStartPoint(row, col) {
+
+            var oldRow;
+            var oldCol;
+
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    if (grid[i][j] == 2) {
+                        oldRow = i;
+                        oldCol = j;
+                        grid[i][j] = 0;
+                    }
+                }
+            }
+
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(oldCol * cellSize, oldRow * cellSize, cellSize, cellSize);
+            ctx.strokeRect(oldCol * cellSize, oldRow * cellSize, cellSize, cellSize);
+
+            grid[row][col] = 2;
+            ctx.fillStyle = 'green';
+            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+
+        function setDestinationPoint(row, col) {
+            var oldRow;
+            var oldCol;
+
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    if (grid[i][j] == 3) {
+                        oldRow = i;
+                        oldCol = j;
+                        grid[i][j] = 0;
+                    }
+                }
+            }
+
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(oldCol * cellSize, oldRow * cellSize, cellSize, cellSize);
+            ctx.strokeRect(oldCol * cellSize, oldRow * cellSize, cellSize, cellSize);
+
+            grid[row][col] = 3;
+            ctx.fillStyle = 'red';
+            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+            ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+        }
+
+        function selectMode(input) {
+            mode = input.value;
+        }
+
+        function printGrid() {
+            console.log(grid);
+        }
+
+        function findPath() {
+            var checkStartPoint = false;
+
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+
+                    if (grid[i][j] == 2) {
+                        checkStartPoint = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!checkStartPoint) {
+                alert("Please set up start point");
+                return;
+            }
+
+            var checkDestinationPoint = false;
+
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    if (grid[i][j] == 3) {
+                        checkDestinationPoint = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!checkDestinationPoint) {
+                alert("Please set up destination point");
+                return;
+            }
+
+            var solvingAlgorithms = document.getElementsByName("solvingAlgorithms");
+            var selectedAlgorithm;
+            for (var i = 0; i < solvingAlgorithms.length; i++) {
+                if (solvingAlgorithms[i].checked) {
+                    selectedAlgorithm = solvingAlgorithms[i].value;
+                    break;
+                }
+            }
+
+            switch (selectedAlgorithm) {
+                case 'bfs':
+                    console.log("bfs");
+                    findBFSPath();
+                    break;
+            }
+
+
+        }
+
+        function findBFSPath() {
+
+            var startingPoint, destinationPoint;
+
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    if (grid[i][j] == 2) {
+                        startingPoint = {
+                            row: i,
+                            col: j
+                        }
+                        break;
+                    }
+
+                }
+            }
+
+
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    if (grid[i][j] == 3) {
+                        destinationPoint = {
+                            row: i,
+                            col: j
+                        }
+                        break;
+                    }
+                }
+            }
+
+            var row = startingPoint.row;
+            var col = startingPoint.col;
+
+            var queue = [];
+
+
+            var timer = setInterval(function () {
+                
+
+                if(row == destinationPoint.row && col == destinationPoint.col) {
+                    alert("target found!");
+                    clearInterval(timer);
+                    return;
+                }
+
+                if (row == startingPoint.row && col == startingPoint.col) {
+
+                } else {
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                }
+                moveCursor(row, col, queue);
+                //console.log(queue);
+
+                var str = "";
+                for(var i = 0; i < queue.length; i++) {
+                    str += "(" + queue[i][0] + ", " + queue[i][1] + ") " 
+                }
+
+                var queueMsg = document.getElementById("queueMsg");
+                queueMsg.textContent = str;
+                
+                row = queue[0][0];
+                col = queue[0][1];
+                //console.log("dequeue", row, col);
+                //alert();
+                queue.shift();
+            }, 200);
+
+
+
+        }
+
+        function moveCursor(row, col, list) {
+            cursor = {
+                row: row,
+                col: col
+            }
+
+            //console.log(row, col);
+
+            if (row - 1 >= 0) {
+                if (grid[row - 1][col] == 0 || grid[row - 1][col] == 3) {
+                    if (!checkDuplicate(row - 1, col, list)) {
+                        list.push([row - 1, col]);
+                        grid[row - 1][col] = 4;
+                        //console.log("push", row-1, col);
+                    }
+                }
+            }
+
+            if (col - 1 >= 0) {
+                if (grid[row][col - 1] == 0 || grid[row][col - 1] == 3) {
+                    if (!checkDuplicate(row, col - 1, list)) {
+                        list.push([row, col - 1]);
+                        grid[row][col - 1] = 4;
+                        //console.log("push", row, col -1);
+                    }
+                }
+
+            }
+
+            if (row + 1 < rows) {
+                if (grid[row + 1][col] == 0 || grid[row + 1][col] == 3) {
+                    if (!checkDuplicate(row + 1, col, list)) {
+                        list.push([row + 1, col]);
+                        grid[row + 1][col] = 4;
+                        //console.log("push", row + 1, col);
+                    }
+                }
+
+            }
+
+            if (col + 1 < cols) { 
+                if (grid[row][col + 1] == 0 || grid[row][col + 1] == 3) {
+                    if (!checkDuplicate(row, col + 1, list)) {
+                        list.push([row, col + 1]);
+                        grid[row][col + 1] = 4;
+                        //console.log("push", row, col + 1);
+                    }
+                }
+            }
+        }
+
+        function checkDuplicate(row, col, list) {
+            for (var i = 0; i < list.length; i++) {
+                if (list[i][0] == row && list[i][1] == col) {
+                    return true;
+                }
+            }
+
+            return false;
+
+        }
+
+
+    </script>
+</body>
+
+</html>
