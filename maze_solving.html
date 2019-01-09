@@ -3,39 +3,69 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Page Title</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maze Solving</title>
+    <style>
+
+    </style>
 </head>
 
 <body>
-    <div>
-    <input type="radio" id="blockRadio" name="mode" value="block" checked onchange="selectMode(this);" />
-    <label for="blockRadio">Set Blocks</label>
-    
-    <input type="radio" id="startRadio" name="mode" value="start" onchange="selectMode(this);" />
-    <label for="blockRadio">Set Start Point</label>
+    <div style="float: left; width: 25%; margin: 5px;">
+        <div id="tileDiv">
+            <fieldset>
+                <legend>Maze</legend>
 
-    <input type="radio" id="destRadio" name="mode" value="destination" onchange="selectMode(this);" />
-    <label for="blockRadio">Set Destination Point</label>
-</div>
-    <input type="button" value="Print Grid" onclick="printGrid();" />
-    </br>
 
-    <label for="bfsRadio">BFS</label>
-    <input type="radio" id="bfsRadio" name="solvingAlgorithms" value="bfs" checked />
 
-    <input type="button" value="Find Path" onclick="findPath();" />
+                <input type="radio" id="startRadio" name="mazeMode" value="start" checked onchange="selectMazeMode('start');" />
+                <label for="blockRadio">Start Point</label>
+                </br>
+
+                <input type="radio" id="destRadio" name="mazeMode" value="destination" onchange="selectMazeMode('destination');" />
+                <label for="blockRadio">Destination Point</label>
+                </br>
+
+                <input type="radio" id="wall_cellRadio" name="mazeMode" value="wall_cell" onchange="selectMazeMode('wall_cell');" />
+                <label for="blockRadio">Wall - cell</label>
+                </br>
+
+                <input type="radio" id="wall_rowRadio" name="mazeMode" value="wall_row" onchange="selectMazeMode('wall_row');" />
+                <label for="blockRadio">Wall - row</label>
+                </br>
+
+                <input type="radio" id="wall_colRadio" name="mazeMode" value="wall_col" onchange="selectMazeMode('wall_col');" />
+                <label for="blockRadio">Wall - column</label>
+                </br>
+
+                <input type="button" value="Generate Random Maze" />
+                </br>
+
+                <input type="button" value="Clear Maze" onclick="createMaze();" />
+
+
+
+            </fieldset>
+
+        </div>
+        </br>
+        <div id="solvingAlgorithmsDiv">
+            <fieldset>
+                <legend>Solving Algorithms</legend>
+                <label for="bfsRadio">BFS</label>
+                <input type="radio" id="bfsRadio" name="solvingAlgorithms" value="bfs" checked /></br>
+
+
+                <input type="button" value="Find Path" onclick="preparePathFinding();" />
+            </fieldset>
+        </div>
+    </div>
     </br>
 
     <canvas id="canvas" width="500" height="500" style="border: solid 1px black"></canvas>
-    <p id="message"></p>
     <p id="queueMsg"></p>
     <script>
 
-        function Cell(row, col, status) {
-            this.row = row;
-            this.col = col;
+        function Cell(status) {
             this.status = status;
             this.parent = undefined;
         }
@@ -50,32 +80,46 @@
         var canvas = document.getElementById("canvas");
         var ctx = canvas.getContext("2d");
 
-        var mode = 'block';
+        var selectedMode = 'start';
 
-        var rows = 10;
-        var cols = 10;
-
-        var cellSize = 50;
+        var grid;
+        var rows = 20;
+        var cols = 20;
+        var cellSize = 25;
 
         var mousePosition = {
             x: 0,
             y: 0,
         }
 
-        var grid = [];
-        for (var i = 0; i < rows; i++) {
-            var temp = [];
-            for (var j = 0; j < cols; j++) {
-                temp.push(0);
+        createMaze();
+
+
+        function createMaze() {
+            grid = [];
+            for (var i = 0; i < rows; i++) {
+                var temp = [];
+                for (var j = 0; j < cols; j++) {
+                    var cell = new Cell(0);
+                    temp.push(cell);
+                }
+                grid.push(temp);
             }
-            grid.push(temp);
+
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    ctx.strokeRect(i * cellSize, j * cellSize, cellSize, cellSize);
+                }
+            }
+
         }
 
-        for (var i = 0; i < rows; i++) {
-            for (var j = 0; j < cols; j++) {
-                ctx.strokeRect(i * cellSize, j * cellSize, cellSize, cellSize);
-            }
+        function selectMazeMode(mode) {
+            selectedMode = mode;
         }
+
 
         canvas.addEventListener('mousemove', function (e) {
             var bbox = canvas.getBoundingClientRect();
@@ -84,10 +128,6 @@
 
             mousePosition.x = x;
             mousePosition.y = y;
-
-            var message = document.getElementById("message");
-            message.textContent = x + ", " + y;
-
 
         });
 
@@ -99,39 +139,58 @@
             var col = Math.floor(x / cellSize);
             var row = Math.floor(y / cellSize);
 
-            switch (mode) {
-                case 'block':
-                    if (grid[row][col] == 1) {
-                        deleteBlock(row, col);
-                    } else {
-                        createBlock(row, col);
-                    }
-                    break;
+            var cell = grid[row][col];
+
+            switch (selectedMode) {
                 case 'start':
                     setStartPoint(row, col);
                     break;
-
                 case 'destination':
                     setDestinationPoint(row, col);
                     break;
+                case 'wall_cell':
+                    if (grid[row][col].status == 1) {
+                        removeWall(row, col);
+                    } else {
+                        createWall(row, col);
+                    }
+                    break;
+                case 'wall_row':
+                    if (grid[row][col].status == 1) {
+                        for (var i = 0; i < cols; i++) {
+                            removeWall(row, i)
+                        }
+                    } else {
+                        for (var i = 0; i < cols; i++) {
+                            createWall(row, i);
+                        }
+                    }
+                    break;
+                case 'wall_col':
+                    if (grid[row][col].status == 1) {
+                        for (var i = 0; i < rows; i++) {
+                            removeWall(i, col)
+                        }
+                    } else {
+                        for (var i = 0; i < rows; i++) {
+                            createWall(i, col);
+                        }
+                    }
+                    break;
             }
-
-
-
-
         });
 
 
-        function createBlock(row, col) {
+        function createWall(row, col) {
 
-            grid[row][col] = 1;
+            grid[row][col].status = 1;
             ctx.fillStyle = '#ccc';
             ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
             ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
         }
 
-        function deleteBlock(row, col) {
-            grid[row][col] = 0;
+        function removeWall(row, col) {
+            grid[row][col].status = 0;
             ctx.fillStyle = '#fff';
             ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
             ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
@@ -144,10 +203,10 @@
 
             for (var i = 0; i < rows; i++) {
                 for (var j = 0; j < cols; j++) {
-                    if (grid[i][j] == 2) {
+                    if (grid[i][j].status == 2) {
                         oldRow = i;
                         oldCol = j;
-                        grid[i][j] = 0;
+                        grid[i][j].status = 0;
                     }
                 }
             }
@@ -156,7 +215,7 @@
             ctx.fillRect(oldCol * cellSize, oldRow * cellSize, cellSize, cellSize);
             ctx.strokeRect(oldCol * cellSize, oldRow * cellSize, cellSize, cellSize);
 
-            grid[row][col] = 2;
+            grid[row][col].status = 2;
             ctx.fillStyle = 'green';
             ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
             ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
@@ -168,10 +227,10 @@
 
             for (var i = 0; i < rows; i++) {
                 for (var j = 0; j < cols; j++) {
-                    if (grid[i][j] == 3) {
+                    if (grid[i][j].status == 3) {
                         oldRow = i;
                         oldCol = j;
-                        grid[i][j] = 0;
+                        grid[i][j].status = 0;
                     }
                 }
             }
@@ -180,7 +239,7 @@
             ctx.fillRect(oldCol * cellSize, oldRow * cellSize, cellSize, cellSize);
             ctx.strokeRect(oldCol * cellSize, oldRow * cellSize, cellSize, cellSize);
 
-            grid[row][col] = 3;
+            grid[row][col].status = 3;
             ctx.fillStyle = 'red';
             ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
             ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
@@ -190,17 +249,13 @@
             mode = input.value;
         }
 
-        function printGrid() {
-            console.log(grid);
-        }
 
-        function findPath() {
+        function preparePathFinding() {
             var checkStartPoint = false;
 
             for (var i = 0; i < rows; i++) {
                 for (var j = 0; j < cols; j++) {
-
-                    if (grid[i][j] == 2) {
+                    if (grid[i][j].status == 2) {
                         checkStartPoint = true;
                         break;
                     }
@@ -216,7 +271,7 @@
 
             for (var i = 0; i < rows; i++) {
                 for (var j = 0; j < cols; j++) {
-                    if (grid[i][j] == 3) {
+                    if (grid[i][j].status == 3) {
                         checkDestinationPoint = true;
                         break;
                     }
@@ -249,12 +304,12 @@
 
         function findBFSPath() {
 
-            var startingPoint, destinationPoint;
+            var startPoint, destinationPoint;
 
             for (var i = 0; i < rows; i++) {
                 for (var j = 0; j < cols; j++) {
-                    if (grid[i][j] == 2) {
-                        startingPoint = {
+                    if (grid[i][j].status == 2) {
+                        startPoint = {
                             row: i,
                             col: j
                         }
@@ -267,7 +322,7 @@
 
             for (var i = 0; i < rows; i++) {
                 for (var j = 0; j < cols; j++) {
-                    if (grid[i][j] == 3) {
+                    if (grid[i][j].status == 3) {
                         destinationPoint = {
                             row: i,
                             col: j
@@ -277,73 +332,101 @@
                 }
             }
 
-            var row = startingPoint.row;
-            var col = startingPoint.col;
 
-            var queue = [];
+            var queue = [startPoint];
 
 
             var timer = setInterval(function () {
-                
 
-                if(row == destinationPoint.row && col == destinationPoint.col) {
+                var row = queue[0].row;
+                var col = queue[0].col;
+                queue.shift();
+
+                if (row == destinationPoint.row && col == destinationPoint.col) {
                     alert("target found!");
                     clearInterval(timer);
+                    tracePath(row, col);
                     return;
                 }
 
-                if (row == startingPoint.row && col == startingPoint.col) {
+                if (row == startPoint.row && col == startPoint.col) {
 
                 } else {
                     ctx.fillStyle = "blue";
                     ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
                     ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
                 }
+
                 moveCursor(row, col, queue);
-                //console.log(queue);
 
                 var str = "";
-                for(var i = 0; i < queue.length; i++) {
-                    str += "(" + queue[i][0] + ", " + queue[i][1] + ") " 
+                for (var i = 0; i < queue.length; i++) {
+                    str += "(" + queue[i].row + ", " + queue[i].col + ") "
                 }
 
                 var queueMsg = document.getElementById("queueMsg");
                 queueMsg.textContent = str;
-                
-                row = queue[0][0];
-                col = queue[0][1];
-                //console.log("dequeue", row, col);
-                //alert();
-                queue.shift();
+
+                if (queue.length == 0) {
+                    alert("Target can't be found!")
+                    clearInterval(timer);
+
+                    return;
+                }
             }, 200);
 
+        }
 
+        function tracePath(row, col) {
+            parentRow = grid[row][col].parent.row;
+            parentCol = grid[row][col].parent.col;
+
+            row = parentRow;
+            col = parentCol;
+
+            while (true) {
+                if (grid[row][col].status == 2) {
+                    break;
+                }
+
+                grid[row][col].status = 5;
+                ctx.fillStyle = 'cyan';
+                ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+
+                parentRow = grid[row][col].parent.row;
+                parentCol = grid[row][col].parent.col;
+
+                row = parentRow;
+                col = parentCol;
+                
+            }
 
         }
 
         function moveCursor(row, col, list) {
-            cursor = {
-                row: row,
-                col: col
-            }
 
             //console.log(row, col);
 
             if (row - 1 >= 0) {
-                if (grid[row - 1][col] == 0 || grid[row - 1][col] == 3) {
+                if (grid[row - 1][col].status == 0 || grid[row - 1][col].status == 3) {
                     if (!checkDuplicate(row - 1, col, list)) {
-                        list.push([row - 1, col]);
-                        grid[row - 1][col] = 4;
+                        list.push({ row: row - 1, col: col });
+                        grid[row - 1][col].status = 4;
+                        grid[row - 1][col].parent = { row: row, col: col };
+
                         //console.log("push", row-1, col);
                     }
                 }
             }
 
             if (col - 1 >= 0) {
-                if (grid[row][col - 1] == 0 || grid[row][col - 1] == 3) {
+                if (grid[row][col - 1].status == 0 || grid[row][col - 1].status == 3) {
                     if (!checkDuplicate(row, col - 1, list)) {
-                        list.push([row, col - 1]);
-                        grid[row][col - 1] = 4;
+                        list.push({ row: row, col: col - 1 });
+                        grid[row][col - 1].status = 4;
+                        grid[row][col - 1].parent = { row: row, col: col };
+
                         //console.log("push", row, col -1);
                     }
                 }
@@ -351,21 +434,25 @@
             }
 
             if (row + 1 < rows) {
-                if (grid[row + 1][col] == 0 || grid[row + 1][col] == 3) {
+                if (grid[row + 1][col].status == 0 || grid[row + 1][col].status == 3) {
                     if (!checkDuplicate(row + 1, col, list)) {
-                        list.push([row + 1, col]);
-                        grid[row + 1][col] = 4;
+                        list.push({ row: row + 1, col: col });
+                        grid[row + 1][col].status = 4;
+                        grid[row + 1][col].parent = { row: row, col: col };
+
                         //console.log("push", row + 1, col);
                     }
                 }
 
             }
 
-            if (col + 1 < cols) { 
-                if (grid[row][col + 1] == 0 || grid[row][col + 1] == 3) {
+            if (col + 1 < cols) {
+                if (grid[row][col + 1].status == 0 || grid[row][col + 1].status == 3) {
                     if (!checkDuplicate(row, col + 1, list)) {
-                        list.push([row, col + 1]);
-                        grid[row][col + 1] = 4;
+                        list.push({ row: row, col: col + 1 });
+                        grid[row][col + 1].status = 4;
+                        grid[row][col + 1].parent = { row: row, col: col };
+
                         //console.log("push", row, col + 1);
                     }
                 }
@@ -374,7 +461,7 @@
 
         function checkDuplicate(row, col, list) {
             for (var i = 0; i < list.length; i++) {
-                if (list[i][0] == row && list[i][1] == col) {
+                if (list[i].row == row && list[i].col == col) {
                     return true;
                 }
             }
