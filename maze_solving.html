@@ -52,10 +52,12 @@
             <fieldset>
                 <legend>Solving Algorithms</legend>
                 <label for="bfsRadio">BFS</label>
-                <input type="radio" id="bfsRadio" name="solvingAlgorithms" value="bfs" checked /></br>
-
-
+                <input type="radio" id="bfsRadio" name="solvingAlgorithms" value="bfs" checked />
+                <label for="dfsRadio">DFS</label>
+                <input type="radio" id="dfsRadio" name="solvingAlgorithms" value="dfs" />
+                </br>
                 <input type="button" value="Find Path" onclick="preparePathFinding();" />
+
             </fieldset>
         </div>
     </div>
@@ -297,9 +299,140 @@
                     console.log("bfs");
                     findBFSPath();
                     break;
+                case 'dfs':
+                    console.log("dfs");
+                    findDFSPath();
+                    break;
             }
 
 
+        }
+
+        function findDFSPath() {
+            var startPoint, destinationPoint;
+
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    if (grid[i][j].status == 2) {
+                        startPoint = {
+                            row: i,
+                            col: j
+                        }
+                        break;
+                    }
+
+                }
+            }
+
+
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    if (grid[i][j].status == 3) {
+                        destinationPoint = {
+                            row: i,
+                            col: j
+                        }
+                        break;
+                    }
+                }
+            }
+
+
+            var stack = [startPoint];
+
+
+            var timer = setInterval(function () {
+
+                var row = stack[stack.length - 1].row;
+                var col = stack[stack.length - 1].col;
+                stack.pop();
+
+                if (row == destinationPoint.row && col == destinationPoint.col) {
+                    alert("target found!");
+                    clearInterval(timer);
+                    tracePath(row, col);
+                    return;
+                }
+
+                if (row == startPoint.row && col == startPoint.col) {
+
+                } else {
+                    ctx.fillStyle = "blue";
+                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                }
+
+                
+
+                
+
+                
+
+                if (col + 1 < cols) {
+                    if (grid[row][col + 1].status == 0 || grid[row][col + 1].status == 3) {
+                        if (!checkDuplicate(row, col + 1, stack)) {
+                            stack.push({ row: row, col: col + 1 });
+                            grid[row][col + 1].status = 4;
+                            grid[row][col + 1].parent = { row: row, col: col };
+
+                            //console.log("push", row, col + 1);
+                        }
+                    }
+                }
+
+                 if (col - 1 >= 0) {
+                    if (grid[row][col - 1].status == 0 || grid[row][col - 1].status == 3) {
+                        if (!checkDuplicate(row, col - 1, stack)) {
+                            stack.push({ row: row, col: col - 1 });
+                            grid[row][col - 1].status = 4;
+                            grid[row][col - 1].parent = { row: row, col: col };
+
+                            //console.log("push", row, col -1);
+                        }
+                    }
+
+                }
+
+                 if (row + 1 < rows) {
+                    if (grid[row + 1][col].status == 0 || grid[row + 1][col].status == 3) {
+                        if (!checkDuplicate(row + 1, col, stack)) {
+                            stack.push({ row: row + 1, col: col });
+                            grid[row + 1][col].status = 4;
+                            grid[row + 1][col].parent = { row: row, col: col };
+
+                            //console.log("push", row + 1, col);
+                        }
+                    }
+
+                }
+
+                 if (row - 1 >= 0) {
+                    if (grid[row - 1][col].status == 0 || grid[row - 1][col].status == 3) {
+                        if (!checkDuplicate(row - 1, col, stack)) {
+                            stack.push({ row: row - 1, col: col });
+                            grid[row - 1][col].status = 4;
+                            grid[row - 1][col].parent = { row: row, col: col };
+
+                            //console.log("push", row-1, col);
+                        }
+                    }
+                }
+
+                var str = "";
+                for (var i = 0; i < stack.length; i++) {
+                    str += "(" + stack[i].row + ", " + stack[i].col + ") "
+                }
+
+                var queueMsg = document.getElementById("queueMsg");
+                queueMsg.textContent = str;
+
+                if (stack.length == 0) {
+                    alert("Target can't be found!")
+                    clearInterval(timer);
+
+                    return;
+                }
+            }, 500);
         }
 
         function findBFSPath() {
@@ -399,7 +532,7 @@
 
                 row = parentRow;
                 col = parentCol;
-                
+
             }
 
         }
